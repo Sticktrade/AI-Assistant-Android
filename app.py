@@ -23,8 +23,8 @@ def atender_comando():
         return jsonify({"respuesta_voz": "No te he oído bien, ¿puedes repetir?"}), 200
 
     try:
-        # Endpoint directo a la API REST de Gemini
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # Endpoint forzado a una versión superior a la 3.0 (gemini-3.6-flash)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
         
         prompt_sistema = (
             "Eres el asistente personal inteligente del usuario en su teléfono Android. "
@@ -40,16 +40,18 @@ def atender_comando():
 
         headers = {"Content-Type": "application/json"}
         
-        # Petición HTTP directa
-        response = requests.post(url, json=payload, headers=headers, timeout=12)
+        # Hacemos la petición a la API
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
         res_data = response.json()
 
+        # Verificamos si la respuesta fue exitosa
         if response.status_code == 200:
             respuesta_texto = res_data['candidates'][0]['content']['parts'][0]['text']
             return jsonify({"respuesta_voz": respuesta_texto}), 200
         else:
+            # Si hay error, extraemos el mensaje exacto para saber qué falló
             mensaje_error = res_data.get('error', {}).get('message', 'Error desconocido')
-            return jsonify({"respuesta_voz": f"Error de la API de Google: {mensaje_error}"}), 200
+            return jsonify({"respuesta_voz": f"Error de Google: {mensaje_error}"}), 200
 
     except Exception as e:
         return jsonify({"respuesta_voz": f"Error de conexión: {str(e)}"}), 200
