@@ -10,6 +10,25 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
+def obtener_modelo_activo():
+    """Detecta automáticamente un modelo válido habilitado para tu API Key."""
+    try:
+        modelos = genai.list_models()
+        # Buscamos primero un modelo que contenga 'flash' y soporte generación de contenido
+        for m in modelos:
+            if 'generateContent' in m.supported_generation_methods:
+                if 'flash' in m.name:
+                    return m.name
+        # Si no hay 'flash', seleccionamos el primer modelo disponible
+        for m in modelos:
+            if 'generateContent' in m.supported_generation_methods:
+                return m.name
+    except Exception as e:
+        print(f"Error al listar modelos: {e}")
+    
+    # Modelo por defecto si no logra listar
+    return 'models/gemini-1.5-flash'
+
 @app.route('/', methods=['GET'])
 def inicio():
     return jsonify({"estado": "Servidor del Asistente Activo y Escuchando 24/7"}), 200
@@ -26,10 +45,10 @@ def atender_comando():
         return jsonify({"respuesta_voz": "No te he oído bien, ¿puedes repetir?"}), 200
 
     try:
-        # Inicializamos el modelo oficial estándar
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Obtenemos dinámicamente el nombre exacto del modelo que acepta tu API Key
+        nombre_modelo = obtener_modelo_activo()
+        model = genai.GenerativeModel(nombre_modelo)
 
-        # Prompt con la instrucción del sistema
         prompt = (
             "Eres el asistente personal inteligente del usuario en su teléfono Android. "
             "Responde de forma muy concisa, clara y directa para ser leída por voz en español. "
