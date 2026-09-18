@@ -10,15 +10,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# Definimos las herramientas disponibles
-def controlar_wifi(estado: str):
-    """Enciende o apaga el Wi-Fi del dispositivo móvil.
-    
-    Args:
-        estado: 'on' para encender el Wi-Fi, 'off' para apagar el Wi-Fi.
-    """
-    pass
-
 @app.route('/', methods=['GET'])
 def inicio():
     return jsonify({"estado": "Servidor del Asistente Activo y Escuchando 24/7"}), 200
@@ -35,37 +26,21 @@ def atender_comando():
         return jsonify({"respuesta_voz": "No te he oído bien, ¿puedes repetir?"}), 200
 
     try:
-        # Configuración del modelo con el endpoint oficial estable
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
-            tools=[controlar_wifi],
-            system_instruction=(
-                "Eres el asistente personal inteligente del usuario en su teléfono Android. "
-                "Responde de forma concisa, clara y directa para ser leída por voz (Text-to-Speech). "
-                "Usa un tono natural en español."
-            )
+        # Inicializamos el modelo oficial estándar
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # Prompt con la instrucción del sistema
+        prompt = (
+            "Eres el asistente personal inteligente del usuario en su teléfono Android. "
+            "Responde de forma muy concisa, clara y directa para ser leída por voz en español. "
+            f"Pregunta del usuario: {comando_usuario}"
         )
 
-        # Generamos la respuesta
-        response = model.generate_content(comando_usuario)
-
-        acciones = []
-        respuesta_texto = ""
-
-        # Verificamos si Gemini quiere llamar a una función o dar texto
-        if response.candidates and response.candidates[0].function_calls:
-            for call in response.candidates[0].function_calls:
-                acciones.append({
-                    "funcion": call.name,
-                    "parametros": dict(call.args)
-                })
-            respuesta_texto = "Ejecutando la acción en tu dispositivo."
-        else:
-            respuesta_texto = response.text or "Entendido."
+        response = model.generate_content(prompt)
+        respuesta_texto = response.text if response.text else "Entendido."
 
         return jsonify({
-            "respuesta_voz": respuesta_texto,
-            "acciones": acciones
+            "respuesta_voz": respuesta_texto
         }), 200
 
     except Exception as e:
